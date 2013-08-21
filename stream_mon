@@ -1,0 +1,57 @@
+#! /usr/bin/python
+
+"""
+receive_samples.py
+
+By Paul Malmsten, 2010
+pmalmsten@gmail.com
+
+This example continuously reads the serial port and processes IO data
+received from a remote XBee.
+"""
+
+from xbee import ZigBee
+import serial, time, sqlite3
+
+#PORT = r"\\.\COM10"
+PORT = '/dev/ttyUSB0'
+BAUD_RATE = 9600
+
+# Open serial port
+ser = serial.Serial(PORT, BAUD_RATE)
+
+# Create API object
+xbee = ZigBee(ser, escaped=True)
+
+conn = sqlite3.connect("StreamMonitorLog.db")
+
+table_exists = False
+c = conn.cursor() 
+for table in c.execute("SELECT name FROM sqlite_master WHERE type='table';"):
+    #print table
+    if table[0] == 'StreamMonitor':
+        table_exists = True
+
+if not table_exists:
+    c.execute('CREATE TABLE StreamMonitor (turbidity real, temp real, pressure real, battery real)') 
+
+while True:
+    #out = file('StreamMonitorLog', 'a')
+    try:
+        response = xbee.wait_read_frame()
+        turb = 100 - response['samples'][0]['adc-0']/10.23
+        temp = (1.2 * response['samples'][0]['adc-1']/1024.0) / 10.0
+        pres = 7.25 * response['samples'][0]['adc-2']/1024.0
+        volt = 6.25 * response['samples'][0]['adc-3']/1024.0
+        #out.write("%s\tTurbidity: %3.1f%%\tTemperature: %3.1fC\tPressure: %5.2f\tVolts: %5.2f\n" % (time.asctime(), turb, temp, pres, volt))
+        c.execute("INSERT INTO StreamMonitor VALUES (%3.1f, %3.1f, %5.2f, %5.2f)" % (turb, temp, pres, volt))
+        conn.commit()
+	#for s in response['samples']:
+		#print "\t", s
+    except KeyboardInterrupt:
+        break
+    #out.close()
+
+conn.close()        
+ser.close()
+
