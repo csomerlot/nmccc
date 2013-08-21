@@ -35,11 +35,11 @@ if not table_exists:
 # Infinite loop...
 while True:
         response = xbee.wait_read_frame()
-        turb = 100 - response['samples'][0]['adc-0']/10.23
+        turb = 100. - response['samples'][0]['adc-0']/10.23
         temp = (1.2 * response['samples'][0]['adc-1']/1024.0) / 10.0
         pres = 7.25 * response['samples'][0]['adc-2']/1024.0
         volt = 6.25 * response['samples'][0]['adc-3']/1024.0
-        #out.write("%s\tTurbidity: %3.1f%%\tTemperature: %3.1fC\tPressure: %5.2f\tVolts: %5.2f\n" % (time.asctime(), turb, temp, pres, volt))
+        
         c.execute("INSERT INTO StreamMonitor VALUES (%3.1f, %3.1f, %5.2f, %5.2f)" % (turb, temp, pres, volt))
         conn.commit()
 
