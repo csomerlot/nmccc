@@ -6,9 +6,10 @@ import serial, time, sqlite3, os
 #PORT = r"\\.\COM10"
 PORT = '/dev/ttyUSB0'
 BAUD_RATE = 9600
+DB = r"/home/pi/StreamMonitorLog.db"
 
 # WAIT for it..
-while not os.path.exists(r'/dev/ttyUSB0'):
+while not os.path.exists(PORT):
     time.sleep(3)
 
 # Open serial port
@@ -17,21 +18,22 @@ ser = serial.Serial(PORT, BAUD_RATE)
 # Create API object
 xbee = ZigBee(ser, escaped=True)
 
-conn = sqlite3.connect(r"/home/pi/StreamMonitorLog.db")
-
-table_exists = False
+# Connect to DB (also, create DB if it does not exist)
+conn = sqlite3.connect(DB)
 c = conn.cursor() 
+
+# Find out if table exists
+table_exists = False
 for table in c.execute("SELECT name FROM sqlite_master WHERE type='table';"):
-    #print table
     if table[0] == 'StreamMonitor':
         table_exists = True
 
+# Create table if it does not exist
 if not table_exists:
-    c.execute('CREATE TABLE StreamMonitor (turbidity real, temp real, pressure real, battery real)') 
+	c.execute('CREATE TABLE StreamMonitor (turbidity real, temp real, pressure real, battery real)') 
 
+# Infinite loop...
 while True:
-    #out = file(r'/home/pi/StreamMonitorLog', 'a')
-    try:
         response = xbee.wait_read_frame()
         turb = 100 - response['samples'][0]['adc-0']/10.23
         temp = (1.2 * response['samples'][0]['adc-1']/1024.0) / 10.0
@@ -40,11 +42,6 @@ while True:
         #out.write("%s\tTurbidity: %3.1f%%\tTemperature: %3.1fC\tPressure: %5.2f\tVolts: %5.2f\n" % (time.asctime(), turb, temp, pres, volt))
         c.execute("INSERT INTO StreamMonitor VALUES (%3.1f, %3.1f, %5.2f, %5.2f)" % (turb, temp, pres, volt))
         conn.commit()
-	#for s in response['samples']:
-		#print "\t", s
-    except KeyboardInterrupt:
-        break
-    #out.close()
 
 conn.close()        
 ser.close()
