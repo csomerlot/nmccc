@@ -11,11 +11,15 @@ received from a remote XBee.
 """
 
 from xbee import ZigBee
-import serial, time, sqlite3
+import serial, time, sqlite3, os
 
 #PORT = r"\\.\COM10"
 PORT = '/dev/ttyUSB0'
 BAUD_RATE = 9600
+
+# WAIT for it..
+while not os.path.exists(r'/dev/ttyUSB0'):
+    time.sleep(3)
 
 # Open serial port
 ser = serial.Serial(PORT, BAUD_RATE)
@@ -23,7 +27,7 @@ ser = serial.Serial(PORT, BAUD_RATE)
 # Create API object
 xbee = ZigBee(ser, escaped=True)
 
-conn = sqlite3.connect("StreamMonitorLog.db")
+conn = sqlite3.connect(r"/home/pi/StreamMonitorLog.db")
 
 table_exists = False
 c = conn.cursor() 
@@ -36,7 +40,7 @@ if not table_exists:
     c.execute('CREATE TABLE StreamMonitor (turbidity real, temp real, pressure real, battery real)') 
 
 while True:
-    #out = file('StreamMonitorLog', 'a')
+    #out = file(r'/home/pi/StreamMonitorLog', 'a')
     try:
         response = xbee.wait_read_frame()
         turb = 100 - response['samples'][0]['adc-0']/10.23
