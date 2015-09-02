@@ -1,5 +1,7 @@
 #! /usr/bin/python
 
+## Make sure to set to run at startup in daemon mode
+
 from xbee import ZigBee
 import serial, time, sqlite3, os
 
